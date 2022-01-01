@@ -36,6 +36,8 @@ package:
     - ./bin/**
 
 functions:
+  persistMessage:
+    handler: bin/persistMessage
   hello:
     handler: bin/hello
     events:
