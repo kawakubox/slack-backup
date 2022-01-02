@@ -87,3 +87,7 @@ resources:
       Type: AWS::SQS::Queue
       Properties:
         QueueName: slack-message-json-put
+    SlackExports:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: splathon-slack-exports
