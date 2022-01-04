@@ -89,8 +89,14 @@ resources:
         QueueName: slack-message-json-put
     SlackExports:
       Type: AWS::S3::Bucket
+      DependsOn:
+        - SQSPolicy
       Properties:
         BucketName: splathon-slack-exports
+        NotificationConfiguration:
+          QueueConfigurations:
+            - Event: s3:ObjectCreated:Put
+              Queue: !GetAtt SlackMessageJsonPutQueue.Arn
     SQSPolicy:
       Type: AWS::SQS::QueuePolicy
       Properties:
