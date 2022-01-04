@@ -91,3 +91,19 @@ resources:
       Type: AWS::S3::Bucket
       Properties:
         BucketName: splathon-slack-exports
+    SQSPolicy:
+      Type: AWS::SQS::QueuePolicy
+      Properties:
+        Queues:
+          - !Ref SlackMessageJsonPutQueue
+        PolicyDocument:
+          Statement:
+            - Action:
+              - SQS:SendMessage
+              Effect: Allow
+              Resource: !GetAtt SlackMessageJsonPutQueue.Arn
+              Principal:
+                AWS:
+                  - 858526741469
+                Service:
+                  - s3.amazonaws.com
