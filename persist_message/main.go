@@ -11,6 +11,14 @@ import (
 
 type Response events.APIGatewayProxyResponse
 
+type MessagePersistenceService struct {
+	Record events.SQSMessage
+}
+
+func (svc *MessagePersistenceService) Persist() error {
+	return nil
+}
+
 func Handler(ctx context.Context, event events.SQSEvent) (Response, error) {
 	json, err := json.Marshal(event)
 	if err != nil {
@@ -19,6 +27,12 @@ func Handler(ctx context.Context, event events.SQSEvent) (Response, error) {
 		return res, err
 	}
 	log.Info().RawJSON("event", json).Msg("")
+
+	for _, record := range event.Records {
+		log.Debug().Msgf("%v", record)
+		svc := MessagePersistenceService{Record: record}
+		svc.Persist()
+	}
 
 	res := buildResponse(http.StatusOK, "OK")
 	return res, nil
