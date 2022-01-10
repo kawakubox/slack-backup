@@ -4,21 +4,26 @@ import (
 	"context"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"net/http"
 )
 
 type Response events.APIGatewayProxyResponse
 
 func Handler(ctx context.Context) (Response, error) {
+	res := buildResponse(http.StatusOK, "OK")
+	return res, nil
+}
+
+func buildResponse(statusCode int, body string) Response {
 	res := Response{
-		StatusCode: 200,
+		StatusCode:      statusCode,
 		IsBase64Encoded: false,
-		Body: "",
+		Body:            body,
 		Headers: map[string]string{
 			"Content-Type": "application/json",
 		},
 	}
-
-	return res, nil
+	return res
 }
 
 func main() {
