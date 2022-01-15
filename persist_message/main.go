@@ -12,7 +12,29 @@ import (
 type Response events.APIGatewayProxyResponse
 
 type MessagePersistenceService struct {
-	Record events.SQSMessage
+	record   *events.SQSMessage
+	s3Event  *events.S3Event
+	s3Bucket *events.S3Bucket
+	s3Object *events.S3Object
+}
+
+func NewMessagePersistenceService(record *events.SQSMessage) *MessagePersistenceService {
+	var instance MessagePersistenceService
+	instance.record = record
+
+	body := []byte(record.Body)
+	err := json.Unmarshal(body, instance.s3Event)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+	log.Debug().Msgf("%v", instance.s3Event)
+
+	instance.s3Bucket = &instance.s3Event.Records[0].S3.Bucket
+	instance.s3Object = &instance.s3Event.Records[0].S3.Object
+
+	return &instance
+}
+
 }
 
 func (svc *MessagePersistenceService) Persist() error {
@@ -30,7 +52,7 @@ func Handler(ctx context.Context, event events.SQSEvent) (Response, error) {
 
 	for _, record := range event.Records {
 		log.Debug().Msgf("%v", record)
-		svc := MessagePersistenceService{Record: record}
+		svc := NewMessagePersistenceService(&record)
 		svc.Persist()
 	}
 
