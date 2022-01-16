@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/rs/zerolog/log"
 	"net/http"
 )
@@ -35,9 +38,37 @@ func NewMessagePersistenceService(record *events.SQSMessage) *MessagePersistence
 	return &instance
 }
 
+func (svc *MessagePersistenceService) BucketName() string {
+	return svc.s3Bucket.Name
+}
+
+func (svc *MessagePersistenceService) ObjectKey() string {
+	return svc.s3Object.Key
+}
+
+func (svc *MessagePersistenceService) download(config aws.Config) (*s3.GetObjectOutput, error) {
+	client := s3.NewFromConfig(config)
+
+	return client.GetObject(context.Background(), &s3.GetObjectInput{
+		Bucket: aws.String(svc.BucketName()),
+		Key:    aws.String(svc.ObjectKey()),
+	})
 }
 
 func (svc *MessagePersistenceService) Persist() error {
+	// Get a S3Object
+	cfg, err := config.LoadDefaultConfig(context.TODO())
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+
+	output, err := svc.download(cfg)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+
+	log.Info().Msgf("%v", output)
+
 	return nil
 }
 
