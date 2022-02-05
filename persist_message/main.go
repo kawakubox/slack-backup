@@ -9,10 +9,20 @@ import (
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/rs/zerolog/log"
+	"io"
 	"net/http"
 )
 
 type Response events.APIGatewayProxyResponse
+
+type Message struct {
+	Channel         string
+	ClientMessageID string `json:"client_msg_id"`
+	Type            string `json:"type"`
+	Text            string `json:"text"`
+	User            string `json:"user"`
+	UnixTimestamp   string `json:"ts"`
+}
 
 type MessagePersistenceService struct {
 	record   *events.SQSMessage
@@ -55,6 +65,18 @@ func (svc *MessagePersistenceService) download(config aws.Config) (*s3.GetObject
 	})
 }
 
+func (svc *MessagePersistenceService) parse(output *s3.GetObjectOutput) (*[]Message, error) {
+	buf, err := io.ReadAll(output.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var messages *[]Message
+	json.Unmarshal(buf, messages)
+
+	return messages, nil
+}
+
 func (svc *MessagePersistenceService) Persist() error {
 	// Get a S3Object
 	cfg, err := config.LoadDefaultConfig(context.TODO())
@@ -68,6 +90,14 @@ func (svc *MessagePersistenceService) Persist() error {
 	}
 
 	log.Info().Msgf("%v", output)
+
+	// Parse a json file
+	messages, err := svc.parse(output)
+	if err != nil {
+		log.Fatal().Err(err)
+	}
+
+	log.Debug().Msgf("%v", messages)
 
 	return nil
 }
