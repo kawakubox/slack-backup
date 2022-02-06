@@ -77,9 +77,9 @@ func (svc *MessagePersistenceService) parse(output *s3.GetObjectOutput) (*[]Mess
 	return messages, nil
 }
 
-func (svc *MessagePersistenceService) Persist() error {
+func (svc *MessagePersistenceService) Persist(ctx context.Context) error {
 	// Get a S3Object
-	cfg, err := config.LoadDefaultConfig(context.TODO())
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		log.Fatal().Err(err)
 	}
@@ -114,7 +114,7 @@ func Handler(ctx context.Context, event events.SQSEvent) (Response, error) {
 	for _, record := range event.Records {
 		log.Debug().Msgf("%v", record)
 		svc := NewMessagePersistenceService(&record)
-		svc.Persist()
+		svc.Persist(ctx)
 	}
 
 	res := buildResponse(http.StatusOK, "OK")
