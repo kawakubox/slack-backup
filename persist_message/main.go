@@ -31,21 +31,22 @@ type MessagePersistenceService struct {
 	s3Object *events.S3Object
 }
 
-func NewMessagePersistenceService(record *events.SQSMessage) *MessagePersistenceService {
+func NewMessagePersistenceService(message *events.SQSMessage) (*MessagePersistenceService, error) {
 	var instance MessagePersistenceService
-	instance.record = record
+	instance.record = message
 
-	body := []byte(record.Body)
+	body := []byte(message.Body)
 	err := json.Unmarshal(body, instance.s3Event)
 	if err != nil {
 		log.Fatal().Err(err)
+		return nil, err
 	}
 	log.Debug().Msgf("%v", instance.s3Event)
 
 	instance.s3Bucket = &instance.s3Event.Records[0].S3.Bucket
 	instance.s3Object = &instance.s3Event.Records[0].S3.Object
 
-	return &instance
+	return &instance, nil
 }
 
 func (svc *MessagePersistenceService) BucketName() string {
