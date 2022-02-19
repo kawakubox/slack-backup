@@ -66,14 +66,14 @@ func (svc *MessagePersistenceService) download(config aws.Config) (*s3.GetObject
 	})
 }
 
-func (svc *MessagePersistenceService) parse(output *s3.GetObjectOutput) (*[]Message, error) {
+func (svc *MessagePersistenceService) parse(output *s3.GetObjectOutput) ([]Message, error) {
 	buf, err := io.ReadAll(output.Body)
 	if err != nil {
 		return nil, err
 	}
 
-	var messages *[]Message
-	json.Unmarshal(buf, messages)
+	var messages []Message
+	json.Unmarshal(buf, &messages)
 
 	return messages, nil
 }
