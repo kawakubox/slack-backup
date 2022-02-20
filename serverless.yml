@@ -9,13 +9,15 @@ provider:
   region: ap-northeast-1
 
 # you can add statements to the Lambda function's IAM Role here
-#  iam:
-#    role:
-#      statements:
-#        - Effect: "Allow"
-#          Action:
-#            - "s3:ListBucket"
-#          Resource: { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ServerlessDeploymentBucket" } ] ]  }
+  iam:
+    role:
+      statements:
+        - Effect: "Allow"
+          Action:
+            - "s3:*"
+          Resource:
+            - "arn:aws:s3:::splathon-slack-exports"
+            - "arn:aws:s3:::splathon-slack-exports/*"
 #        - Effect: "Allow"
 #          Action:
 #            - "s3:PutObject"
