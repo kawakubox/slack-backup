@@ -3,14 +3,18 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"net/http"
+	"strings"
+
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/rs/zerolog/log"
-	"io"
-	"net/http"
 )
 
 type Response events.APIGatewayProxyResponse
@@ -57,6 +61,11 @@ func (svc *MessagePersistenceService) ObjectKey() string {
 	return svc.s3Object.Key
 }
 
+func (svc *MessagePersistenceService) ChannelName() string {
+	separated := strings.Split(svc.s3Object.Key, "/")
+	return separated[len(separated)-2]
+}
+
 func (svc *MessagePersistenceService) download(config aws.Config) (*s3.GetObjectOutput, error) {
 	client := s3.NewFromConfig(config)
 
@@ -76,6 +85,32 @@ func (svc *MessagePersistenceService) parse(output *s3.GetObjectOutput) ([]Messa
 	json.Unmarshal(buf, &messages)
 
 	return messages, nil
+}
+
+func (svc *MessagePersistenceService) persist(ctx context.Context, cfg aws.Config, messages []Message) error {
+	client := dynamodb.NewFromConfig(cfg)
+
+	for _, msg := range messages {
+		putItemInput := &dynamodb.PutItemInput{
+			TableName: aws.String("splathon-slack-message"),
+			Item: map[string]types.AttributeValue{
+				"ClientMessageID": &types.AttributeValueMemberS{Value: msg.ClientMessageID},
+				"Channel":         &types.AttributeValueMemberS{Value: svc.ChannelName()},
+				"User":            &types.AttributeValueMemberS{Value: msg.User},
+				"Text":            &types.AttributeValueMemberS{Value: msg.Text},
+				"Timestamp":       &types.AttributeValueMemberN{Value: msg.UnixTimestamp},
+			},
+		}
+
+		log.Debug().Msgf("%+v", putItemInput)
+
+		_, err := client.PutItem(ctx, putItemInput)
+		if err != nil {
+			log.Fatal().Err(err)
+			return err
+		}
+	}
+	return nil
 }
 
 func (svc *MessagePersistenceService) Persist(ctx context.Context) error {
@@ -99,6 +134,13 @@ func (svc *MessagePersistenceService) Persist(ctx context.Context) error {
 	}
 
 	log.Debug().Msgf("%v", messages)
+
+	// Persist Slack message
+	log.Info().Msg("[START] Persist Slack message")
+
+	svc.persist(ctx, cfg, messages)
+
+	log.Info().Msg("[END] Persist Slack message")
 
 	return nil
 }
