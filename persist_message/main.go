@@ -29,26 +29,24 @@ type Message struct {
 }
 
 type MessagePersistenceService struct {
-	record   *events.SQSMessage
+	message  *events.SQSMessage
 	s3Event  *events.S3Event
 	s3Bucket *events.S3Bucket
 	s3Object *events.S3Object
 }
 
 func NewMessagePersistenceService(message *events.SQSMessage) (*MessagePersistenceService, error) {
-	var instance MessagePersistenceService
-	instance.record = message
-
-	body := []byte(message.Body)
-	err := json.Unmarshal(body, instance.s3Event)
+	var event events.S3Event
+	err := json.Unmarshal([]byte(message.Body), &event)
 	if err != nil {
 		log.Fatal().Err(err)
 		return nil, err
 	}
-	log.Debug().Msgf("%v", instance.s3Event)
 
-	instance.s3Bucket = &instance.s3Event.Records[0].S3.Bucket
-	instance.s3Object = &instance.s3Event.Records[0].S3.Object
+	var instance MessagePersistenceService
+	instance.message = message
+	instance.s3Bucket = &event.Records[0].S3.Bucket
+	instance.s3Object = &event.Records[0].S3.Object
 
 	return &instance, nil
 }
